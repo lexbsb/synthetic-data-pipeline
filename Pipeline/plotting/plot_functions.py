@@ -6,20 +6,32 @@ from shapely import wkt
 import geopandas as gpd
 import pandas as pd
 import numpy as np
+from pathlib import Path
 
 
 
-def gemeente_lader(path ='..\\..\\Support\\gemeentegrenzen.csv'):
-    
+def gemeente_lader(path=None):
     """
-    Function loads in csv with the geographical coordinates of every municipality in the netherlands
-    and converts it to the right datatype. 
-    """
+    Load CSV with the geographical coordinates of every municipality in the Netherlands,
+    and convert the geometry column to the right datatype.
     
-    # Loading in the geographical data
+    Parameters
+    ----------
+    path : str or Path, optional
+        Location of the gemeentegrenzen.csv file. If not given, will default to
+        "../../Support/gemeentegrenzen.csv" relative to this script.
+    
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with 'geometry' converted to shapely objects.
+    """
+    if path is None:
+        # build path relative to the script file
+        path = Path(__file__).resolve().parent.parent.parent / "Support" / "gemeentegrenzen.csv"
+    
     gemeentes = pd.read_csv(path)
-    gemeentes['geometry'] = gemeentes['geometry'].apply(wkt.loads)
-    #gpd_gem = gpd.GeoDataFrame(gemeentes, crs='epsg:4326')
+    gemeentes["geometry"] = gemeentes["geometry"].apply(wkt.loads)
     
     return gemeentes
 
@@ -38,7 +50,7 @@ def map_plotter(df_real, df_synth, gemeentes, frame, column='<indicate data colu
     """
     
        
-    df_real = df_real[df_real[zip_code].map(df_real[zip_code].value_counts()) > 25]
+    df_real = df_real[df_real[zip_code].map(df_real[zip_code].value_counts()) > 2] #changed from 25 to 2 for testing purposes
     df_real = df_real.groupby([zip_code], as_index=False)[column].mean()
     df_plot = df_real.merge(gemeentes, how='left', left_on=zip_code, right_on='PC6')
     df_plot = gpd.GeoDataFrame(df_plot, crs='epsg:4326')
@@ -92,7 +104,7 @@ def distribution_comparison(df1, df2, column, name, step_split=4):
     steps = int(df1[column].nunique() /  step_split)
     bins = np.linspace(df1[column].min(), df1[column].max(), steps)
     
-    #print(df1[column].min(), df1[column].max(), df1[column].nunique())
+    print(df1[column].min(), df1[column].max(), df1[column].nunique())
 
     fig = plt.figure(figsize=(24, 8))
 

@@ -35,7 +35,6 @@ def full_data_process(file_loc, train_test_path, name, drop_cols=[]):
     for col in df.columns:
         try:
             df[col] = pd.to_numeric(df[col])
-            #df[col] = df[col].astype('int')
         except:
             if df[col].nunique() > 10:
                 df = df.drop(columns=col)

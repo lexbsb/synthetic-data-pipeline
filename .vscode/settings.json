@@ -1,0 +1,15 @@
+{
+  "terminal.integrated.profiles.windows": {
+    "Anaconda (sdp)": {
+      "path": "C:\\Windows\\System32\\cmd.exe",
+      "args": [
+        "/K",
+        "\"C:\\Users\\PinhoUlianA\\AppData\\Local\\anaconda3\\Scripts\\activate.bat\" sdp"
+      ],
+      "icon": "terminal-cmd"
+    }
+  },
+  "terminal.integrated.defaultProfile.windows": "Anaconda (sdp)",
+  "python.defaultInterpreterPath": "C:\\Users\\PinhoUlianA\\AppData\\Local\\anaconda3\\envs\\sdp\\python.exe",
+  "rscript.path": "C:\\Users\\PinhoUlianA\\AppData\\Local\\Programs\\R\\R-4.4.2\\bin\\x64\\Rscript.exe"
+}

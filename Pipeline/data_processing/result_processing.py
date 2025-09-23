@@ -8,49 +8,68 @@ from .df_comparison.df_comparer import *
 from .df_comparison.real_or_synth import real_synth
 from .df_comparison.predict_metrics import metric
 
+from Pipeline.data_processing.utils import align_columns_to_reference, common_columns
+
 
 def result_combiner(df, frame_name, df_real, c, subset_cols):
-    
     """
-    Function combines all the individual fidelity metrics into a single dataframe.
-    Function also combines the duplicate numbers into the same frame.
-    
-    Input: 
-    df: The synthetic or  holdout data which is being compared against the real data
-    frame_name: the name of the synthetic data 
-    df_real: The trainings data used to generate the synthetic data.
-    c: The amount of interactions across which the JSD, TVD and WSD is calculated
-    subet_cols: The subset of columns across which the duplicates are checked.
-    
-    Returns a dataframe with all the scores.
-    
+    Combina métricas de fidelidade em um único dict.
     """
-    
-    # Calculating the number of duplicates per frame
-    dupe_numbers = subset_dupes(df_real, df, columns=subset_cols)[1]
-    end_result = {'dupe_numbers':dupe_numbers}
 
-    # Calculating the sum of the difference in % of the mean and std
-    stat_numbers = comparison_table(df_real, df, cutoff = 0)[1]
+    # 1) Alinha nomes do sintético ao esquema do real
+    df = align_columns_to_reference(df, df_real)
+
+    # 2) Define colunas a usar
+    if subset_cols is not None:
+        # resolve subset para os nomes exatos do df_real, via normalização
+        norm_ref = {_norm_name(c): c for c in df_real.columns}
+        resolved_subset = []
+        for col in subset_cols:
+            nc = _norm_name(col)
+            if nc in norm_ref:
+                resolved_subset.append(norm_ref[nc])
+        cols = [c for c in resolved_subset if c in df_real.columns and c in df.columns]
+    else:
+        cols = common_columns(df_real, df)
+
+    if not cols:
+        raise ValueError(
+            "[result_combiner] Nenhuma coluna em comum após alinhamento. "
+            f"Real={len(df_real.columns)} Synth={len(df.columns)}"
+        )
+
+    # 3) Ordena e restringe aos mesmos campos
+    df_real = df_real[cols]
+    df = df[cols]
+
+    # 4) Higienização leve
+    df = df.replace(99999.0, np.nan)
+
+    # 5) Métricas existentes
+    dupe_numbers = subset_dupes(df_real, df, columns=cols)[1]
+    end_result = {'dupe_numbers': dupe_numbers}
+
+    stat_numbers = comparison_table(df_real, df, cutoff=0)[1]
     end_result['sum_%_mean_diff'] = stat_numbers[0]
-    end_result['sum_%_median_diff']  = stat_numbers[1]
-    end_result['sum_%_std_diff']  = stat_numbers[2]
-    end_result['binary_val_count_diff']  = stat_numbers[3]
-    # Calculating the correlation norm
-    corr_norm = round(correlation_comparison(df_real, df, cutoff = 30)[1], 2)
+    end_result['sum_%_median_diff'] = stat_numbers[1]
+    end_result['sum_%_std_diff'] = stat_numbers[2]
+    end_result['binary_val_count_diff'] = stat_numbers[3]
+
+    corr_norm = round(correlation_comparison(df_real, df, cutoff=30)[1], 2)
     end_result['correlation_norm'] = corr_norm
 
-    # Predicting real or fake
-    synth_real = real_synth(df1=df_real, df2=df, name=frame_name, fill_na_val=-9999)[0].loc['accuracy'].values[0]
+    synth_real = (
+        real_synth(df1=df_real, df2=df, name=frame_name, fill_na_val=-9999)[0]
+        .loc['accuracy']
+        .values[0]
+    )
     end_result['real_or_synth_acc'] = synth_real
 
-    # Calculating jenson shannon and wasserstein distance
     jsws = round(stat_sim(df_real, df, c=c).mean(), 5)
     end_result['jenson_shannon'] = jsws[0]
     end_result['total_variational_dist'] = jsws[1]
     end_result['wasserstein_dist'] = jsws[2]
 
-    
     return end_result
 
 

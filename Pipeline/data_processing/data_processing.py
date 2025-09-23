@@ -2,29 +2,34 @@
 
 import glob
 import pandas as pd
+from pathlib import Path
 
 def data_loader(train_loc, test_loc, synth_map_loc):
     """
-    Function loads the data
-    train_loc: The path to the train csv file
-    test_loc: The path to the test/holdout csv file
-    synth_map_loc: The path the the folder containing the synthetic dataframes
-    
-    Returns: the real dataframe and a dict with the location of the holdout and synthetic dataframes
+    Loads real train df and builds a dict with the holdout and all synthetic CSVs.
     """
-    
+    # Coerce to Path objects
+    train_loc = Path(train_loc)
+    test_loc = Path(test_loc)
+    synth_path = Path(synth_map_loc)
+
+    # Load real data
     df_real = pd.read_csv(train_loc)
-    glob_dict = {'holdout':test_loc}
-    globlist = glob.glob(synth_map_loc + "*.csv")
+
+    # Initialize mapping with holdout
+    glob_dict = {"holdout": str(test_loc)}
+
+    # Find synthetic CSVs
+    globlist = list(synth_path.glob("*.csv"))
     for item in globlist:
-        name = item.replace(synth_map_loc, '')
-        name = name.replace('.csv', '')
-        glob_dict[name] = item
-    print('Processed: ',glob_dict.keys())
-        
+        name = item.stem            # filename without extension
+        glob_dict[name] = str(item) # store as string path for compatibility
+
+    print("Processed:", list(glob_dict.keys()))
+
     if len(glob_dict) <= 1:
         raise Exception("No csvs detected at the given synth location")
-    
+
     return df_real, glob_dict
 
 def ratio_calc(results):
