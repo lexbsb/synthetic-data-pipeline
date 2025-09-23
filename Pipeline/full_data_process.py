@@ -32,13 +32,23 @@ def full_data_process(file_loc, train_test_path, name, drop_cols=[]):
     # Replacing the custom missing values
     df = df.replace({'$5':np.nan,'$6':np.nan,'$7':np.nan, '':np.nan, " ":np.nan})
     # Making all compatible columns numeric.
+    # for col in df.columns:
+    #     try:
+    #         df[col] = pd.to_numeric(df[col])
+    #     except:
+    #         if df[col].nunique() > 10:
+    #             df = df.drop(columns=col)
+    #             print(col, 'has been dropped from the dataset')
     for col in df.columns:
-        try:
-            df[col] = pd.to_numeric(df[col])
-        except:
-            if df[col].nunique() > 10:
-                df = df.drop(columns=col)
-                print(col, 'has been dropped from the dataset')
+        if "zip" in col.lower():   # force zip columns to string
+            df[col] = df[col].astype(str)
+        else:
+            try:
+                df[col] = pd.to_numeric(df[col])
+            except:
+                if df[col].nunique() > 10:
+                    df = df.drop(columns=col)
+                    print(col, 'has been dropped from the dataset')
    
     # Drop empty rows
     df = df[df.index.isin(df.dropna(how='all').index)]
@@ -76,5 +86,3 @@ if __name__ == "__main__":
     args = argparser.parse_args()
     
     full_data_process(args.file_loc, args.train_loc, args.name)
-    
-   

@@ -1,38 +1,3 @@
-# rm(list = ls())
-
-# cat("Starting\n")
-
-# .libPaths("C:\\Users\\PinhoUlianA\\AppData\\Local\\Programs\\R\\R-4.4.2\\library")
-
-# library("synthpop")
-
-# args <- commandArgs()
-
-# for (arg in args) {
-#   if (grepl("train", arg)) {
-#     train_loc <- arg
-#   }
-#   if (grepl("_synth", arg)) {
-#     synth_loc <-arg
-#   }
-# }
-
-# cat(train_loc, "\n")
-# cat(synth_loc, "\n")
-
-# df_fix <- read.csv(train_loc)
-# na_counts <- apply(df_fix, 2, function(x) sum(is.na(x)))
-# df_last_ord <- df_fix[,order(na_counts, decreasing = FALSE)]
-# empty_last = names(df_last_ord)
-# mysyn_emp_last = syn(df_fix, minnumlevels = 10, visit.sequence = empty_last, print.flag = TRUE)
-
-# tryCatch({
-#   write.syn(mysyn_emp_last, filename = synth_loc, filetype = "csv", save.complete = FALSE, extended.info = FALSE) 
-# }, error = function(e){
-#   print(e)
-# })
-
-
 rm(list = ls())
 cat("Starting\n")
 
@@ -57,16 +22,12 @@ if (!grepl("\\.csv$", synth_loc, ignore.case = TRUE)) synth_loc <- paste0(synth_
 out_dir <- dirname(synth_loc)
 if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE, showWarnings = FALSE)
 
-# --- lê dados
+# read data
 df_fix <- read.csv(train_loc, check.names = TRUE)
 
-# # forces zip_code as fator, if present
-# if ("zip_code" %in% names(df_fix)) {
-#   df_fix$zip_code <- as.factor(df_fix$zip_code)
-# }
-
-#cat("Structure of the BD being synthetised: \n")
-#str(df_fix)
+# Force zip-like columns to factor (categorical)
+zip_cols <- grep("zip", names(df_fix), ignore.case = TRUE, value = TRUE)
+for (z in zip_cols) df_fix[[z]] <- as.factor(df_fix[[z]])
 
 # --- ordena variáveis por NAs e usa como visit.sequence
 na_counts <- colSums(is.na(df_fix))

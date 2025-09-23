@@ -50,7 +50,7 @@ def map_plotter(df_real, df_synth, gemeentes, frame, column='<indicate data colu
     """
     
        
-    df_real = df_real[df_real[zip_code].map(df_real[zip_code].value_counts()) > 2] #changed from 25 to 2 for testing purposes
+    df_real = df_real[df_real[zip_code].map(df_real[zip_code].value_counts()) > 25] #changed from 25 to 2 for testing purposes
     df_real = df_real.groupby([zip_code], as_index=False)[column].mean()
     df_plot = df_real.merge(gemeentes, how='left', left_on=zip_code, right_on='PC6')
     df_plot = gpd.GeoDataFrame(df_plot, crs='epsg:4326')
