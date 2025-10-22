@@ -47,41 +47,89 @@ def privacy_synth_frame(df_real, df, key, memory):
     dist_ss = pdc(df, Y=None, reduce_func=red_func, metric='minkowski', n_jobs=-1, working_memory=memory)
   
     results = {'real_'+key: dist_rs, key: dist_ss}
-    inbetween_result, end_result, end_df_list, i = {}, {}, [], 0
+    end_result = {}
+    eps = 1e-12  # protection for NNDR division
     
-    for frame in results:
-        matrix_gen = results[frame]
-        for df in matrix_gen:
-            fifth_perc = np.percentile(df[i], 5)
-            nn_fifth_perc = np.percentile(df[i] / df[i+1], 5)
-            inbetween_result[frame] = [fifth_perc, nn_fifth_perc]
-            end_df_list.append(pd.DataFrame(inbetween_result, index=['DCR','NNDR']))
-        end_result[frame] = pd.concat(end_df_list, axis=1).mean(axis=1)
-        i = 1
+    for frame, matrix_gen in results.items():
+        # Collect all rows across chunks before computing percentiles
+        d1_list, r_list = [], []
+        
+        # Decide if distances include self (synth-synth) or not (real-synth)
+        same_set = (frame == key)
+        
+        for blk in matrix_gen:
+            # blk has columns [0,1,2] already sorted by red_func
+            if same_set:
+                # self-distance at column 0; use columns 1 (NN1) and 2 (NN2)
+                d1 = blk.iloc[:, 1].to_numpy() if isinstance(blk, pd.DataFrame) else blk[:, 1]
+                d2 = blk.iloc[:, 2].to_numpy() if isinstance(blk, pd.DataFrame) else blk[:, 2]
+            else:
+                # no self; use columns 0 (NN1) and 1 (NN2)
+                d1 = blk.iloc[:, 0].to_numpy() if isinstance(blk, pd.DataFrame) else blk[:, 0]
+                d2 = blk.iloc[:, 1].to_numpy() if isinstance(blk, pd.DataFrame) else blk[:, 1]
+            
+            # NNDR with protection and finite filtering
+            d2_safe = np.maximum(d2, eps)
+            r = d1 / d2_safe
+
+            mask = np.isfinite(d1) & np.isfinite(r)
+            if np.any(mask):
+                d1_list.append(d1[mask])
+                r_list.append(r[mask])
+        
+        if d1_list:
+            d1_all = np.concatenate(d1_list)
+            r_all = np.concatenate(r_list)
+            fifth_perc = np.percentile(d1_all, 5)
+            nn_fifth_perc = np.percentile(r_all, 5)
+        else:
+            fifth_perc = np.nan
+            nn_fifth_perc = np.nan
+        
+        end_result[frame] = pd.Series([fifth_perc, nn_fifth_perc], index=['DCR','NNDR'])
         
     print_time = round(((time.time() - frame_time) / 60), 2)
     print('Calculated all privacy evaluations for', key, 'in', print_time, 'minutes')
         
-    return pd.DataFrame(end_result, index=['DCR','NNDR'])
+    return pd.DataFrame(end_result)
 
 def single_priv_calc(real, memory):
     
     frame_time = time.time()
     print('Starting privacy calculations with real')
     
-    inbetween_result, end_df_list = {}, []
-    
     # Creating a distance matrix generator that applies the red_func
     dist_real = pdc(real, Y=None, reduce_func=red_func, metric='minkowski', n_jobs=-1, working_memory=memory)
     # Calculating the 5th percentiles for each chunk in the distance matrix for the real data
     
-    for df in dist_real:
-        fifth_perc = np.percentile(df[1], 5)
-        nn_fifth_perc = np.percentile(df[1] / df[2], 5)
-        inbetween_result['Real'] = [fifth_perc, nn_fifth_perc]
-        end_df_list.append(pd.DataFrame(inbetween_result, index=['DCR','NNDR']))
+    d1_list, r_list = [], []
+    eps = 1e-12  # protection for NNDR division
     
-    end_df = pd.concat(end_df_list, axis=1).mean(axis=1)
+    for blk in dist_real:
+        # blk has columns [0,1,2] with column 0 being self-distance (=0)
+        if isinstance(blk, pd.DataFrame):
+            d1 = blk.iloc[:, 1].to_numpy()
+            d2 = blk.iloc[:, 2].to_numpy()
+        else:
+            d1 = blk[:, 1]
+            d2 = blk[:, 2]
+        
+        d2_safe = np.maximum(d2, eps)
+        r = d1 / d2_safe
+        
+        mask = np.isfinite(d1) & np.isfinite(r)
+        if np.any(mask):
+            d1_list.append(d1[mask])
+            r_list.append(r[mask])
+    
+    if d1_list:
+        d1_all = np.concatenate(d1_list)
+        r_all = np.concatenate(r_list)
+        fifth_perc = np.percentile(d1_all, 5)
+        nn_fifth_perc = np.percentile(r_all, 5)
+        end_df = pd.Series([fifth_perc, nn_fifth_perc], index=['DCR','NNDR'])
+    else:
+        end_df = pd.Series([np.nan, np.nan], index=['DCR','NNDR'])
     
     print_time = round(((time.time() - frame_time) / 60), 2)
     print('Calculated all privacy evaluations for real in', print_time, 'minutes')

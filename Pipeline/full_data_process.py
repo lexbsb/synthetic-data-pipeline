@@ -31,14 +31,6 @@ def full_data_process(file_loc, train_test_path, name, drop_cols=[]):
         
     # Replacing the custom missing values
     df = df.replace({'$5':np.nan,'$6':np.nan,'$7':np.nan, '':np.nan, " ":np.nan})
-    # Making all compatible columns numeric.
-    # for col in df.columns:
-    #     try:
-    #         df[col] = pd.to_numeric(df[col])
-    #     except:
-    #         if df[col].nunique() > 10:
-    #             df = df.drop(columns=col)
-    #             print(col, 'has been dropped from the dataset')
     for col in df.columns:
         if "zip" in col.lower():   # force zip columns to string
             df[col] = df[col].astype(str)

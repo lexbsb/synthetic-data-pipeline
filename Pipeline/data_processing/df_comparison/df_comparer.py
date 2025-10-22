@@ -176,8 +176,10 @@ def stat_sim(df1, df2, c=1):
         
         jsd = jensenshannon(l1, l2, 2.0)
         tvd = np.sum(np.abs(l1 - l2)) / 2
+        
         try:
-            wsd = wasserstein_distance(l1, l2)
+            support = np.arange(len(l1))
+            wsd = wasserstein_distance(support, support, u_weights = l1, v_weights = l2)
         except:
             wsd = 0
         results[str(column)] = [jsd, tvd, wsd]

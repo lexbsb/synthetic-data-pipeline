@@ -16,12 +16,12 @@ def result_combiner(df, frame_name, df_real, c, subset_cols):
     Combina métricas de fidelidade em um único dict.
     """
 
-    # 1) Alinha nomes do sintético ao esquema do real
+    # 1) Aligns names between synth and real datasets
     df = align_columns_to_reference(df, df_real)
 
-    # 2) Define colunas a usar
+    # 2) Defines columns to be used
     if subset_cols is not None:
-        # resolve subset para os nomes exatos do df_real, via normalização
+        # normalize column names
         norm_ref = {_norm_name(c): c for c in df_real.columns}
         resolved_subset = []
         for col in subset_cols:
@@ -38,14 +38,14 @@ def result_combiner(df, frame_name, df_real, c, subset_cols):
             f"Real={len(df_real.columns)} Synth={len(df.columns)}"
         )
 
-    # 3) Ordena e restringe aos mesmos campos
+    # 3) orders and restrics to the same columns
     df_real = df_real[cols]
     df = df[cols]
 
-    # 4) Higienização leve
+    # 4) cleaning
     df = df.replace(99999.0, np.nan)
 
-    # 5) Métricas existentes
+    # 5) Existing metrics
     dupe_numbers = subset_dupes(df_real, df, columns=cols)[1]
     end_result = {'dupe_numbers': dupe_numbers}
 
